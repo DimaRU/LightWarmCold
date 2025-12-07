@@ -18,7 +18,7 @@
 
 #include <app/server/CommissioningWindowManager.h>
 #include <app/server/Server.h>
-#include <app/server/OnboardingCodesUtil.h>
+#include <setup_payload/OnboardingCodesUtil.h>
 #include <setup_payload/SetupPayload.h>
 
 static const char *TAG = "app_main";
@@ -260,20 +260,20 @@ extern "C" void app_main()
     
     color_temperature_light::config_t light_config;
     light_config.on_off.on_off = DEFAULT_POWER;
-    light_config.on_off.lighting.start_up_on_off = nullptr;
+    light_config.on_off_lighting.start_up_on_off = nullptr;
     light_config.level_control.current_level = CONFIG_DEFAULT_BRIGHTNESS;
     light_config.level_control.on_level = nullptr;
-    light_config.level_control.lighting.start_up_current_level = nullptr;
+    light_config.level_control_lighting.start_up_current_level = nullptr;
     // light_config.level_control.options = (uint8_t)LevelControl::OptionsBitmap::kCoupleColorTempToLevel + (uint8_t)LevelControl::OptionsBitmap::kCoupleColorTempToLevel;
  
     light_config.color_control.color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
     light_config.color_control.enhanced_color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
  
-    light_config.color_control.color_temperature.color_temp_physical_max_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_WARM, MATTER_TEMPERATURE_FACTOR);
-    light_config.color_control.color_temperature.color_temp_physical_min_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_COLD, MATTER_TEMPERATURE_FACTOR);
-    light_config.color_control.color_temperature.couple_color_temp_to_level_min_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_COLD, MATTER_TEMPERATURE_FACTOR);
-    light_config.color_control.color_temperature.startup_color_temperature_mireds = nullptr;
-    ESP_LOGI(TAG, "Color temp min - max: %u - %u", light_config.color_control.color_temperature.color_temp_physical_min_mireds, light_config.color_control.color_temperature.color_temp_physical_max_mireds);
+    light_config.color_control_color_temperature.color_temp_physical_max_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_WARM, MATTER_TEMPERATURE_FACTOR);
+    light_config.color_control_color_temperature.color_temp_physical_min_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_COLD, MATTER_TEMPERATURE_FACTOR);
+    light_config.color_control_color_temperature.couple_color_temp_to_level_min_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_COLD, MATTER_TEMPERATURE_FACTOR);
+    light_config.color_control_color_temperature.startup_color_temperature_mireds = nullptr;
+    ESP_LOGI(TAG, "Color temp min - max: %u - %u", light_config.color_control_color_temperature.color_temp_physical_min_mireds, light_config.color_control_color_temperature.color_temp_physical_max_mireds);
 
     // endpoint handles can be used to add/modify clusters.
     endpoint_t *endpoint = color_temperature_light::create(node, &light_config, ENDPOINT_FLAG_NONE, nullptr);
@@ -348,5 +348,5 @@ extern "C" void app_main()
 #endif
     esp_matter::console::init();
     ESP_LOGI(TAG, "Console initialized");
-    #endif
+#endif
 }
