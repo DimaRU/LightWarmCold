@@ -222,21 +222,22 @@ static void setupLogging() {
     chip::Logging::SetLogRedirectCallback(&matterLoggingCallback);
     
     esp_log_level_set("chip[SVR]", ESP_LOG_ERROR);
-    esp_log_level_set("chip[DIS]", ESP_LOG_ERROR);
     esp_log_level_set("chip[DMG]", ESP_LOG_ERROR);
     esp_log_level_set("chip[IN]", ESP_LOG_ERROR);
     esp_log_level_set("chip[TS]", ESP_LOG_ERROR);
     esp_log_level_set("chip[ZCL]", ESP_LOG_ERROR);
     esp_log_level_set("chip[EM]", ESP_LOG_ERROR);
     esp_log_level_set("chip[DL]", ESP_LOG_ERROR);
-    esp_log_level_set("CHIP[DL]", ESP_LOG_ERROR);
+    esp_log_level_set("chip[IM]", ESP_LOG_ERROR);
+    esp_log_level_set("chip[DIS]", ESP_LOG_ERROR);
+    esp_log_level_set("chip[SC]", ESP_LOG_ERROR);
+
     esp_log_level_set("NimBLE", ESP_LOG_ERROR);
-    
     esp_log_level_set("wifi", ESP_LOG_ERROR);
+    esp_log_level_set("wifi_init", ESP_LOG_ERROR);
     esp_log_level_set("ROUTE_HOOK", ESP_LOG_ERROR);
     esp_log_level_set("esp_matter_attribute", ESP_LOG_ERROR);
     esp_log_level_set("esp_matter_command", ESP_LOG_ERROR);
-
 }
 
 extern "C" void app_main()
