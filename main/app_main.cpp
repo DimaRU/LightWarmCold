@@ -41,7 +41,8 @@ static const uint16_t s_decryption_key_len = decryption_key_end - decryption_key
 
 static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
 {
-    switch (event->Type) {
+    switch (event->Type)
+    {
     case chip::DeviceLayer::DeviceEventType::kInterfaceIpAddressChanged:
         switch (event->InterfaceIpAddressChanged.Type)
         {
@@ -59,35 +60,36 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
             break;
         }
         break;
-        
-    case chip::DeviceLayer::DeviceEventType::kThreadConnectivityChange:
-        switch (event->ThreadConnectivityChange.Result) {
-            case chip::DeviceLayer::ConnectivityChange::kConnectivity_Established:
-                ESP_LOGI(TAG, "Thread Connectivity established");
-                break;
-            case chip::DeviceLayer::ConnectivityChange::kConnectivity_Lost:
-                ESP_LOGI(TAG, "Thread Connectivity lost");
-                break;
-            case chip::DeviceLayer::ConnectivityChange::kConnectivity_NoChange:
-                ESP_LOGI(TAG, "Thread Connectivity no change");
-                break;
+
+    case chip::DeviceLayer::DeviceEventType::kWiFiConnectivityChange:
+        switch (event->WiFiConnectivityChange.Result)
+        {
+        case chip::DeviceLayer::ConnectivityChange::kConnectivity_Established:
+            ESP_LOGI(TAG, "WiFi Connectivity established");
+            break;
+        case chip::DeviceLayer::ConnectivityChange::kConnectivity_Lost:
+            ESP_LOGI(TAG, "WiFi Connectivity lost");
+            break;
+        case chip::DeviceLayer::ConnectivityChange::kConnectivity_NoChange:
+            ESP_LOGI(TAG, "WiFi Connectivity no change");
+            break;
         }
         break;
 
-        case chip::DeviceLayer::DeviceEventType::kThreadStateChange:
-        if (event->ThreadStateChange.RoleChanged) {
-            ESP_LOGI(TAG, "Thread State Change: Role Changed");
-        } else if (event->ThreadStateChange.AddressChanged) {
-            ESP_LOGI(TAG, "Thread State Change: Address Changed");
-        } else if (event->ThreadStateChange.ChildNodesChanged) {
-            ESP_LOGI(TAG, "Thread State Change: Child Nodes Changed");
-        } else if (event->ThreadStateChange.NetDataChanged) {
-            ESP_LOGI(TAG, "Thread State Change: Net Data Changed");
-        } else {
-            ESP_LOGI(TAG, "Thread State Change");
+    case chip::DeviceLayer::DeviceEventType::kThreadConnectivityChange:
+        switch (event->ThreadConnectivityChange.Result)
+        {
+        case chip::DeviceLayer::ConnectivityChange::kConnectivity_Established:
+            ESP_LOGI(TAG, "Thread Connectivity established");
+            break;
+        case chip::DeviceLayer::ConnectivityChange::kConnectivity_Lost:
+            ESP_LOGI(TAG, "Thread Connectivity lost");
+            break;
+        case chip::DeviceLayer::ConnectivityChange::kConnectivity_NoChange:
+            ESP_LOGI(TAG, "Thread Connectivity no change");
+            break;
         }
         break;
-    case chip::DeviceLayer::DeviceEventType::kOperationalNetworkEnabled:
 
     case chip::DeviceLayer::DeviceEventType::kThreadInterfaceStateChange:
         ESP_LOGI(TAG, "Thread InterfaceState Change");
@@ -118,41 +120,44 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
         break;
 
     case chip::DeviceLayer::DeviceEventType::kFabricRemoved:
+    {
+        ESP_LOGI(TAG, "Fabric removed successfully, left: %u", chip::Server::GetInstance().GetFabricTable().FabricCount());
+        if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0)
         {
-            ESP_LOGI(TAG, "Fabric removed successfully, left: %u", chip::Server::GetInstance().GetFabricTable().FabricCount());
-            if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0)
+            ESP_LOGI(TAG, "Last fabric removed");
+            // Initialise BLE manager
+            CHIP_ERROR err = chip::DeviceLayer::Internal::BLEMgr().Init();
+            if (err != CHIP_NO_ERROR)
             {
-                ESP_LOGI(TAG, "Last fabric removed");
-                // Initialise BLE manager
-                CHIP_ERROR err = chip::DeviceLayer::Internal::BLEMgr().Init();
-                if (err != CHIP_NO_ERROR) {
-                    ESP_LOGE(TAG, "BLEManager initialization failed: %" CHIP_ERROR_FORMAT, err.Format());
-                }  
-                // Clear Wifi credentials if any
-                if (chip::DeviceLayer::ConnectivityMgr().IsWiFiStationProvisioned()) {
-                    ESP_LOGI(TAG, "ClearWiFiStationProvision");
-                    chip::DeviceLayer::ConnectivityMgr().ClearWiFiStationProvision();
-                }
-                // Clear Thread provision if any
-                if (chip::DeviceLayer::ConnectivityMgr().IsThreadProvisioned()) {
-                    ESP_LOGI(TAG, "ErasePersistentInfo");
-                    chip::DeviceLayer::ConnectivityMgr().ErasePersistentInfo();
-                }
-                esp_restart();
-                // if (!commissionMgr.IsCommissioningWindowOpen())
-                // {
-				    // Advertise over BLE
-                    // chip::CommissioningWindowManager & commissionMgr = chip::Server::GetInstance().GetCommissioningWindowManager();
-                    // constexpr auto kTimeoutSeconds = chip::System::Clock::Seconds16(k_timeout_seconds);
-                    // chip::DeviceLayer::ConnectivityMgr().SetBLEAdvertisingEnabled(true);
-                    // err = commissionMgr.OpenBasicCommissioningWindow(kTimeoutSeconds);
-                    // if (err != CHIP_NO_ERROR) {
-                    //     ESP_LOGE(TAG, "Failed to open commissioning window: %" CHIP_ERROR_FORMAT, err.Format());
-                    // }
-                // }
+                ESP_LOGE(TAG, "BLEManager initialization failed: %" CHIP_ERROR_FORMAT, err.Format());
             }
-        break;
+            // Clear Wifi credentials if any
+            if (chip::DeviceLayer::ConnectivityMgr().IsWiFiStationProvisioned())
+            {
+                ESP_LOGI(TAG, "ClearWiFiStationProvision");
+                chip::DeviceLayer::ConnectivityMgr().ClearWiFiStationProvision();
+            }
+            // Clear Thread provision if any
+            if (chip::DeviceLayer::ConnectivityMgr().IsThreadProvisioned())
+            {
+                ESP_LOGI(TAG, "ErasePersistentInfo");
+                chip::DeviceLayer::ConnectivityMgr().ErasePersistentInfo();
+            }
+            esp_restart();
+            // if (!commissionMgr.IsCommissioningWindowOpen())
+            // {
+            // Advertise over BLE
+            // chip::CommissioningWindowManager & commissionMgr = chip::Server::GetInstance().GetCommissioningWindowManager();
+            // constexpr auto kTimeoutSeconds = chip::System::Clock::Seconds16(k_timeout_seconds);
+            // chip::DeviceLayer::ConnectivityMgr().SetBLEAdvertisingEnabled(true);
+            // err = commissionMgr.OpenBasicCommissioningWindow(kTimeoutSeconds);
+            // if (err != CHIP_NO_ERROR) {
+            //     ESP_LOGE(TAG, "Failed to open commissioning window: %" CHIP_ERROR_FORMAT, err.Format());
+            // }
+            // }
         }
+        break;
+    }
 
     case chip::DeviceLayer::DeviceEventType::kFabricWillBeRemoved:
         ESP_LOGI(TAG, "Fabric will be removed");
