@@ -11,8 +11,8 @@ enum class SignalIndicator : short
     commissioningStart, // Commissioning session started
     commissioningStop,  // Commissioning complete/failed
     commissioningClose, // Commissioning window closed
-    identificationOn,
-    identificationOff
+    identificationStart,
+    identificationStop
 };
 
 void signalIndicator(enum SignalIndicator signal);

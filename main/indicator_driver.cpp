@@ -121,11 +121,11 @@ void signalIndicator(enum SignalIndicator signal) {
     case SignalIndicator::commissioningClose: // Commissioning window closed
         params[0] = static_cast<int>(IndicateType::off);
         break;
-    case SignalIndicator::identificationOn:
+    case SignalIndicator::identificationStart:
         params[0] = static_cast<int>(IndicateType::blink);
         params[1] = 250; // blink cycle in ms
         break;
-    case SignalIndicator::identificationOff:
+    case SignalIndicator::identificationStop:
         params[0] = static_cast<int>(IndicateType::off);
         break;
     }
