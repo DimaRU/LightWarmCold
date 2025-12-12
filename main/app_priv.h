@@ -49,8 +49,8 @@ void app_driver_button_init(uint16_t *light_endpoint_id);
  *
  */
 void app_driver_attribute_update(uint32_t cluster_id,
-                                      uint32_t attribute_id, 
-                                      esp_matter_attr_val_t *val);
+                                 uint32_t attribute_id,
+                                 esp_matter_attr_val_t *val);
 
 /** Set defaults for light driver
  *

@@ -37,7 +37,10 @@ menu "LightWarmCold Hardware Configuration"
         default 4000
 
     config BUTTON_GPIO
-        int "Button GPIO number"
+        int "Config button GPIO number"
         default 9
+
+    config INDICATOR_LED_GPIO
+        int "Indicator LED GPIO number"
         
 endmenu

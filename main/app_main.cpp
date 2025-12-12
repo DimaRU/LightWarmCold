@@ -11,7 +11,8 @@
 #include <esp_matter_ota.h>
 
 #include <common_macros.h>
-#include <app_priv.h>
+#include "app_priv.h"
+#include "indicator_driver.h"
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 #include <platform/ESP32/OpenthreadLauncher.h>
 #endif
@@ -66,6 +67,7 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
         {
         case chip::DeviceLayer::ConnectivityChange::kConnectivity_Established:
             ESP_LOGI(TAG, "WiFi Connectivity established");
+            signalIndicator(SignalIndicator::connected);
             break;
         case chip::DeviceLayer::ConnectivityChange::kConnectivity_Lost:
             ESP_LOGI(TAG, "WiFi Connectivity lost");
@@ -81,6 +83,7 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
         {
         case chip::DeviceLayer::ConnectivityChange::kConnectivity_Established:
             ESP_LOGI(TAG, "Thread Connectivity established");
+            signalIndicator(SignalIndicator::connected);
             break;
         case chip::DeviceLayer::ConnectivityChange::kConnectivity_Lost:
             ESP_LOGI(TAG, "Thread Connectivity lost");
@@ -97,26 +100,32 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningComplete:
         ESP_LOGI(TAG, "Commissioning complete, fabric count: %u", chip::Server::GetInstance().GetFabricTable().FabricCount());
+        signalIndicator(SignalIndicator::commissioningStop);
         break;
 
     case chip::DeviceLayer::DeviceEventType::kFailSafeTimerExpired:
         ESP_LOGI(TAG, "Commissioning failed, fail safe timer expired");
+        signalIndicator(SignalIndicator::commissioningStop);
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningSessionStarted:
         ESP_LOGI(TAG, "Commissioning session started");
+        signalIndicator(SignalIndicator::commissioningStart);
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningSessionStopped:
         ESP_LOGI(TAG, "Commissioning session stopped");
+        signalIndicator(SignalIndicator::commissioningStop);
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningWindowOpened:
         ESP_LOGI(TAG, "Commissioning window opened");
+        signalIndicator(SignalIndicator::commissioningOpen);
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningWindowClosed:
         ESP_LOGI(TAG, "Commissioning window closed");
+        signalIndicator(SignalIndicator::commissioningClose);
         break;
 
     case chip::DeviceLayer::DeviceEventType::kFabricRemoved:
@@ -251,11 +260,16 @@ extern "C" void app_main()
 
     /* Initialize led driver */
     app_driver_light_init();
+    indicator_driver_init();
+
+    // Indicate start
+    signalIndicator(SignalIndicator::startup);
 
     // Print config
     ESP_LOGI(TAG, "Warm led pin: %i", CONFIG_LED_WARM_GPIO);
     ESP_LOGI(TAG, "Cold led pin: %i", CONFIG_LED_COLD_GPIO);
     ESP_LOGI(TAG, "On/off/reset button pin: %i", CONFIG_BUTTON_GPIO);
+    ESP_LOGI(TAG, "Indicator led pin: %i", CONFIG_INDICATOR_LED_GPIO);
 
     /* Create a Matter node and add the mandatory Root Node device type on endpoint 0 */
     node::config_t node_config;
