@@ -4,6 +4,7 @@ sdkconfig.old
 managed_components/
 .vscode/c_cpp_properties.json
 .vscode/launch.json
+.vscode/settings.json
 partition_table/
 partitionsFromDevice/
 factory_partition/
