@@ -293,7 +293,7 @@ extern "C" void app_main()
     light_config.color_control_color_temperature.color_temp_physical_max_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_WARM, MATTER_TEMPERATURE_FACTOR);
     light_config.color_control_color_temperature.color_temp_physical_min_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_COLD, MATTER_TEMPERATURE_FACTOR);
     light_config.color_control_color_temperature.couple_color_temp_to_level_min_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_COLD, MATTER_TEMPERATURE_FACTOR);
-    light_config.color_control_color_temperature.startup_color_temperature_mireds = nullptr;
+    light_config.color_control_color_temperature.start_up_color_temperature_mireds = nullptr;
     ESP_LOGI(TAG, "Color temp min - max: %u - %u", light_config.color_control_color_temperature.color_temp_physical_min_mireds, light_config.color_control_color_temperature.color_temp_physical_max_mireds);
 
     // endpoint handles can be used to add/modify clusters.
