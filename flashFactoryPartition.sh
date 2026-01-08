@@ -29,5 +29,4 @@ else
   exit 1
 fi
 
-echo "Flash $factory_partition_file"
-echo "parttool.py --port $1 --partition-table-file partitions.csv write_partition --partition-name=\"factory\" --input=$factory_partition_file"
+parttool.py --port $1 --partition-table-file partitions.csv write_partition --partition-name="factory" --input=$factory_partition_file
