@@ -22,8 +22,9 @@ if ! [[ "$count" =~ ^[1-9][0-9]*$ ]]; then
 fi
 
 MATTER_CRED_PATH=$ESP_MATTER_PATH/connectedhomeip/connectedhomeip/credentials/test
-esp-matter-mfg-tool --outdir $factory_partition_path \
-    --cn-prefix "LightWC" \
+esp-matter-mfg-tool \
+    --outdir $factory_partition_path \
+    --cn-prefix $CN_PREFIX \
     --count $count \
     --target "$IDF_TARGET" \
     --vendor-id 0x$VENDOR_ID \
