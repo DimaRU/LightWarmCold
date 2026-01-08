@@ -31,7 +31,7 @@ menu "LightWarmCold Hardware Configuration"
     config LED_COLD_GPIO
         int "Cold led GPIO number"
         default 5
-        
+
     config PWM_FREQUENCY
         int "Led PWM frequency"
         default 4000
@@ -42,5 +42,6 @@ menu "LightWarmCold Hardware Configuration"
 
     config INDICATOR_LED_GPIO
         int "Indicator LED GPIO number"
-        
+        default 8
+
 endmenu
