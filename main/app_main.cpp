@@ -269,8 +269,12 @@ extern "C" void app_main()
     // Print config
     ESP_LOGI(TAG, "Warm led pin: %i", CONFIG_LED_WARM_GPIO);
     ESP_LOGI(TAG, "Cold led pin: %i", CONFIG_LED_COLD_GPIO);
-    ESP_LOGI(TAG, "On/off/reset button pin: %i", CONFIG_BUTTON_GPIO);
+    ESP_LOGI(TAG, "Button pin: %i", CONFIG_BUTTON_GPIO);
+#if CONFIG_INDICATOR_LED_INVERT == 1
+    ESP_LOGI(TAG, "Indicator led pin: %i (inverted)", CONFIG_INDICATOR_LED_GPIO);
+#else
     ESP_LOGI(TAG, "Indicator led pin: %i", CONFIG_INDICATOR_LED_GPIO);
+#endif
 
     /* Create a Matter node and add the mandatory Root Node device type on endpoint 0 */
     node::config_t node_config;

@@ -45,6 +45,9 @@ static ledc_channel_config_t ledcChannel =
         .timer_sel  = LEDC_TIMER_1,
         .duty       = 0,
         .hpoint     = 0,
+#if CONFIG_INDICATOR_LED_INVERT == 1
+        .flags = { .output_invert = 1 },
+#endif
     };
 
 void indicatorTask( void *pvParameters ) {
