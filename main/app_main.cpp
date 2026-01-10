@@ -348,6 +348,13 @@ extern "C" void app_main()
     err = esp_matter::start(app_event_cb);
     ABORT_APP_ON_FAILURE(err == ESP_OK, ESP_LOGE(TAG, "Failed to start Matter, err:%d", err));
 
+    auto serial_number_attr = attribute::get(basic_information_cluster, BasicInformation::Attributes::SerialNumber::Id);
+    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
+    attribute::get_val(serial_number_attr, &val);
+    if (val.type == ESP_MATTER_VAL_TYPE_CHAR_STRING) {
+        ESP_LOGI(TAG, "Device serial number: %.*s\n", val.val.a.s, val.val.a.b);
+    }
+
     /* Starting driver with default values */
     app_driver_light_set_defaults(light_endpoint_id);
 
