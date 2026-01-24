@@ -48,4 +48,8 @@ menu "LightWarmCold Hardware Configuration"
         bool "Indicator LED inverted logic"
         default n
 
+    config XIAO_ESP32C6_EXTERNAL_ANTENNA
+        bool "Switch to external antenna for XIAO ESP3C6 module"
+        depends on IDF_TARGET_ESP32C6
+
 endmenu
