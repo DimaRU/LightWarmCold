@@ -9,3 +9,4 @@ partition_table/
 partitionsFromDevice/
 factory_partition/
 dependencies.lock
+.clangd
