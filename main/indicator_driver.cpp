@@ -100,6 +100,7 @@ void indicatorTask( void *pvParameters ) {
 
 
 void signalIndicator(enum SignalIndicator signal) {
+    static bool comissioningInProgress = false;
     int params[2];
 
     switch (signal)
@@ -115,13 +116,18 @@ void signalIndicator(enum SignalIndicator signal) {
         params[1] = 1500; // breathe cycle in ms
         break;
     case SignalIndicator::commissioningStart: // Commissioning session started
+        comissioningInProgress = true;
         params[0] = static_cast<int>(IndicateType::breathe);
         params[1] = 700; // breathe cycle in ms
         break;
     case SignalIndicator::commissioningStop: // Commissioning complete/failed
+        comissioningInProgress = false;
         params[0] = static_cast<int>(IndicateType::off);
         break;
     case SignalIndicator::commissioningClose: // Commissioning window closed
+        if (comissioningInProgress) {
+            return;
+        }
         params[0] = static_cast<int>(IndicateType::off);
         break;
     case SignalIndicator::identificationStart:
