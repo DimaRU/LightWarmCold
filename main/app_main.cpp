@@ -250,32 +250,13 @@ static void setupLogging() {
     esp_log_level_set("esp_matter_command", ESP_LOG_ERROR);
 }
 
-#ifdef XIAO_ESP32C6_EXTERNAL_ANTENNA
-
-#define RF_SWITCH_ENABLE 3
-#define WIFI_ANT_CONFIG 14
-
-// Enable external XIAO antenna
-static void xiao_wifi_init()
-{
-    // enable the RF switch
-    gpio_set_direction(RF_SWITCH_ENABLE, GPIO_MODE_OUTPUT);
-    gpio_set_level(RF_SWITCH_ENABLE, 0);
-    // select the external antenna
-    gpio_set_direction(WIFI_ANT_CONFIG, GPIO_MODE_OUTPUT);
-    gpio_set_level(WIFI_ANT_CONFIG, 1);
-}
-
-#endif
-
-
 extern "C" void app_main()
 {
     esp_err_t err = ESP_OK;
 
     setupLogging();
 
-#ifdef XIAO_ESP32C6_EXTERNAL_ANTENNA
+#ifdef CONFIG_XIAO_ESP32C6_EXTERNAL_ANTENNA
     xiao_wifi_init();
 #endif
     

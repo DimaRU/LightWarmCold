@@ -81,3 +81,7 @@ void matterLoggingCallback(const char * module, uint8_t category, const char * m
         .storage_partition_name = "nvs", .netif_queue_size = 10, .task_queue_size = 10, \
     }
 #endif
+
+#ifdef CONFIG_XIAO_ESP32C6_EXTERNAL_ANTENNA
+void xiao_wifi_init();
+#endif
