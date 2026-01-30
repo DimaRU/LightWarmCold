@@ -22,14 +22,14 @@ static void app_driver_light_set_brightness(uint8_t brightness)
 {
     // int value = REMAP_TO_RANGE(brightness, MATTER_BRIGHTNESS, STANDARD_BRIGHTNESS);
     ESP_LOGI(TAG, "LED set brightness: %d", brightness);
-    led_driver_set_pwm(brightness, -1);
+    led_driver_set_current(brightness, -1);
 }
 
 static void app_driver_light_set_temperature(uint16_t mireds)
 {
     uint32_t kelvin = REMAP_TO_RANGE_INVERSE(mireds, STANDARD_TEMPERATURE_FACTOR);
     ESP_LOGI(TAG, "LED set temperature: %ld, %u", kelvin, mireds);
-    led_driver_set_pwm(0xff, mireds);
+    led_driver_set_current(0xff, mireds);
 }
 
 void app_driver_attribute_update(uint32_t cluster_id,
@@ -74,8 +74,8 @@ void app_driver_light_set_defaults(uint16_t endpoint_id)
         auto miredsWarm = val.val.u16;
         attribute = attribute::get(endpoint_id, ColorControl::Id, ColorControl::Attributes::ColorTempPhysicalMinMireds::Id);
         attribute::get_val(attribute, &val);
-        auto miredsCool = val.val.u16;
-        setMiredsBounds(miredsWarm, miredsCool);
+        auto miredsCold = val.val.u16;
+        led_driver_set_mireds_bounds(miredsWarm, miredsCold);
 
         attribute = attribute::get(endpoint_id, ColorControl::Id, ColorControl::Attributes::ColorTemperatureMireds::Id);
         attribute::get_val(attribute, &val);

@@ -13,6 +13,8 @@
 #include "soc/ledc_reg.h"
 
 static void fadeTask( void *pvParameters );
+static void led_driver_calc_pwm();
+static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM);
 
 static const char *TAG = "led_driver";
 
@@ -20,7 +22,7 @@ static bool currentPowerState = false;
 static uint8_t currentBrighness;
 static uint16_t currentColorTemperature;
 static uint16_t MiredsWarm;
-static uint16_t MiredsCool;
+static uint16_t MiredsCold;
 static uint32_t currentPWM[2];
 
 static QueueHandle_t fadeEventQueue;
@@ -52,7 +54,7 @@ static ledc_channel_config_t ledcChannel[2] = {
     },
 };
 
-void fadeTask( void *pvParameters ) {
+static void fadeTask( void *pvParameters ) {
     uint32_t pwm[3];
     int fadeTime;
 
@@ -71,33 +73,33 @@ void fadeTask( void *pvParameters ) {
     }
 }
 
-// Set PWM
-void led_driver_set_pwm(uint8_t brightness, int16_t temperature) {
-    if (brightness != 0xff) {
-        currentBrighness = brightness;
-    }
-    if (temperature != -1) {
-        currentColorTemperature = temperature;
+static void led_driver_calc_pwm() {
+    uint32_t topMargin = 2;
+    uint32_t PWMBase = 1 << ledc_timer.duty_resolution;
+    uint32_t miredsNeutral = (MiredsWarm + MiredsCold) / 2;
+    
+    uint32_t tempCoeff = (currentColorTemperature - MiredsCold) * PWMBase / (MiredsWarm - MiredsCold);
+    uint32_t brightnessCoeff = uint32_t(currentBrighness) * PWMBase / uint32_t(MATTER_BRIGHTNESS);
+    
+    uint32_t warmPWM;
+    uint32_t coldPWM;
+    
+    if (currentColorTemperature >= miredsNeutral) {
+        coldPWM = topMargin * (PWMBase - tempCoeff) * brightnessCoeff / PWMBase;
+        warmPWM = brightnessCoeff;
+    } else {
+        warmPWM = topMargin * tempCoeff * brightnessCoeff / PWMBase;
+        coldPWM = brightnessCoeff;
     }
 
-    if (!currentPowerState) {
-        return;
-    }
-    float tempCoeff = float(currentColorTemperature - MiredsCool) / float(MiredsWarm - MiredsCool) * 2;
-    float brightnessCoeff = float(currentBrighness) / float(MATTER_BRIGHTNESS);
-    float warmCoeff = tempCoeff * brightnessCoeff;
-    if (warmCoeff > 1) {
-        warmCoeff = 1;
-    }
-    float coldCoeff = (2 - tempCoeff) * brightnessCoeff;
-    if (coldCoeff > 1) {
-        coldCoeff = 1;
-    }
-    
-    uint32_t dutyMax = 1 << ledc_timer.duty_resolution;
+    led_driver_queue_pwm(warmPWM, coldPWM);
+}
+ 
+static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM) {
     uint32_t pwm[3];
-    pwm[0] = warmCoeff * dutyMax;
-    pwm[1] = coldCoeff * dutyMax;
+    pwm[0] = warmPWM;
+    pwm[1] = coldPWM;
+
     uint32_t fadeTime = 0;
     for(int chan = 0; chan < 2; chan++) {
         uint32_t time = 0;
@@ -114,10 +116,26 @@ void led_driver_set_pwm(uint8_t brightness, int16_t temperature) {
     }
     pwm[2] = fadeTime;
 
-    ESP_LOGI(TAG, "tempCoeff: %f, brCoeff: %f, max duty: %ld", tempCoeff, brightnessCoeff, dutyMax);
-    ESP_LOGI(TAG, "warmCoeff: %f, coldCoeff: %f", warmCoeff, coldCoeff);
+    ESP_LOGI(TAG, "warmCoeff: %lu, coldCoeff: %lu", warmPWM, coldPWM);
     
     xQueueSend(fadeEventQueue, pwm, 0);
+}
+
+// Public interface
+
+// Set current brightness & color temperature
+void led_driver_set_current(uint8_t brightness, int16_t temperature) {
+    if (brightness != 0xff) {
+        currentBrighness = brightness;
+    }
+    if (temperature != -1) {
+        currentColorTemperature = temperature;
+    }
+
+    if (!currentPowerState) {
+        return;
+    }
+    led_driver_calc_pwm();
 }
 
 void led_driver_set_power(bool power)
@@ -128,7 +146,7 @@ void led_driver_set_power(bool power)
         // led_driver_set_pwm(0, currentColorTemperature);
     } else {
         // Power off
-        led_driver_set_pwm(0, currentColorTemperature);
+        led_driver_set_current(0, currentColorTemperature);
     }
     currentPowerState = power;
 }
@@ -148,8 +166,8 @@ void led_driver_init()
     ledc_fade_func_install(0);
 }
 
-void setMiredsBounds(uint16_t warm, uint16_t cool)
+void led_driver_set_mireds_bounds(uint16_t warm, uint16_t cool)
 {
     MiredsWarm = warm;
-    MiredsCool = cool;
+    MiredsCold = cool;
 }
