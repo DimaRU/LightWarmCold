@@ -22,11 +22,13 @@
             "command": ". ${IDF_PATH}/export.sh >/dev/null 2>&1 && ./flashFactoryPartition.sh ${config:idf.port}",
             "presentation": {
                 "reveal": "always",
-                "panel": "new"
+                "panel": "new",
+                "focus": true
             },
             "options": {
                 "env": {
-                    "IDF_PATH": "${config:idf.espIdfPath}"
+                    "IDF_PATH": "${config:idf.espIdfPath}",
+                    "ESP_MATTER_PATH": "${config:idf.espMatterPath}"
                 }
             },
             "problemMatcher": []
@@ -37,7 +39,8 @@
             "command": ". ${IDF_PATH}/export.sh >/dev/null 2>&1 && ./makeFactoryPartition.sh",
             "presentation": {
                 "reveal": "always",
-                "panel": "new"
+                "panel": "new",
+                "focus": true
             },
             "options": {
                 "env": {
