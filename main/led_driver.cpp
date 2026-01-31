@@ -13,14 +13,10 @@
 #include "soc/ledc_reg.h"
 
 static void fadeTask( void *pvParameters );
-static void led_driver_calc_pwm();
 static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM);
 
 static const char *TAG = "led_driver";
 
-static bool currentPowerState = false;
-static uint8_t currentBrighness;
-static uint16_t currentColorTemperature;
 static uint16_t MiredsWarm;
 static uint16_t MiredsCold;
 static uint32_t currentPWM[2];
@@ -73,28 +69,6 @@ static void fadeTask( void *pvParameters ) {
     }
 }
 
-static void led_driver_calc_pwm() {
-    uint32_t topMargin = 2;
-    uint32_t PWMBase = 1 << ledc_timer.duty_resolution;
-    uint32_t miredsNeutral = (MiredsWarm + MiredsCold) / 2;
-    
-    uint32_t tempCoeff = (currentColorTemperature - MiredsCold) * PWMBase / (MiredsWarm - MiredsCold);
-    uint32_t brightnessCoeff = uint32_t(currentBrighness) * PWMBase / uint32_t(MATTER_BRIGHTNESS);
-    
-    uint32_t warmPWM;
-    uint32_t coldPWM;
-    
-    if (currentColorTemperature >= miredsNeutral) {
-        coldPWM = topMargin * (PWMBase - tempCoeff) * brightnessCoeff / PWMBase;
-        warmPWM = brightnessCoeff;
-    } else {
-        warmPWM = topMargin * tempCoeff * brightnessCoeff / PWMBase;
-        coldPWM = brightnessCoeff;
-    }
-
-    led_driver_queue_pwm(warmPWM, coldPWM);
-}
- 
 static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM) {
     uint32_t pwm[3];
     pwm[0] = warmPWM;
@@ -123,32 +97,26 @@ static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM) {
 
 // Public interface
 
-// Set current brightness & color temperature
-void led_driver_set_current(uint8_t brightness, int16_t temperature) {
-    if (brightness != 0xff) {
-        currentBrighness = brightness;
-    }
-    if (temperature != -1) {
-        currentColorTemperature = temperature;
-    }
-
-    if (!currentPowerState) {
-        return;
-    }
-    led_driver_calc_pwm();
-}
-
-void led_driver_set_power(bool power)
-{
-    ESP_LOGI(TAG, "LED set power: %d", power);
-    if (power) {
-        // Power on
-        // led_driver_set_pwm(0, currentColorTemperature);
+void led_driver_set_pwm(uint8_t brightness, int16_t temperature) {
+    uint32_t topMargin = 2;
+    uint32_t PWMBase = 1 << ledc_timer.duty_resolution;
+    uint32_t miredsNeutral = (MiredsWarm + MiredsCold) / 2;
+    
+    uint32_t tempCoeff = (temperature - MiredsCold) * PWMBase / (MiredsWarm - MiredsCold);
+    uint32_t brightnessCoeff = uint32_t(brightness) * PWMBase / uint32_t(MATTER_BRIGHTNESS);
+    
+    uint32_t warmPWM;
+    uint32_t coldPWM;
+    
+    if (temperature >= miredsNeutral) {
+        coldPWM = topMargin * (PWMBase - tempCoeff) * brightnessCoeff / PWMBase;
+        warmPWM = brightnessCoeff;
     } else {
-        // Power off
-        led_driver_set_current(0, currentColorTemperature);
+        warmPWM = topMargin * tempCoeff * brightnessCoeff / PWMBase;
+        coldPWM = brightnessCoeff;
     }
-    currentPowerState = power;
+
+    led_driver_queue_pwm(warmPWM, coldPWM);
 }
 
 void led_driver_init()

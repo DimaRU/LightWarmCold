@@ -10,13 +10,42 @@
 #include <common_macros.h>
 #include <app_priv.h>
 #include "led_driver.h"
-#include "driver/ledc.h"
-#include "soc/ledc_reg.h"
 
 using namespace chip::app::Clusters;
 using namespace esp_matter;
 
+static bool currentPowerState = false;
+static uint8_t currentBrighness;
+static uint16_t currentColorTemperature;
 static const char *TAG = "light_driver";
+
+// Set current brightness & color temperature
+static void led_driver_set_current(uint8_t brightness, int16_t temperature) {
+    if (brightness != 0xff) {
+        currentBrighness = brightness;
+    }
+    if (temperature != -1) {
+        currentColorTemperature = temperature;
+    }
+
+    if (!currentPowerState) {
+        return;
+    }
+    led_driver_set_pwm(brightness, temperature);
+}
+
+static void led_driver_set_power(bool power)
+{
+    ESP_LOGI(TAG, "LED set power: %d", power);
+    if (power) {
+        // Power on
+        // led_driver_set_pwm(0, currentColorTemperature);
+    } else {
+        // Power off
+        led_driver_set_current(0, currentColorTemperature);
+    }
+    currentPowerState = power;
+}
 
 static void app_driver_light_set_brightness(uint8_t brightness)
 {

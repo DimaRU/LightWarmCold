@@ -9,6 +9,5 @@
 #include <string.h>
 
 void led_driver_init();
-void led_driver_set_power(bool power);
-void led_driver_set_current(uint8_t brightness, int16_t temperature);
 void led_driver_set_mireds_bounds(uint16_t warm, uint16_t cool);
+void led_driver_set_pwm(uint8_t brightness, int16_t temperature);
