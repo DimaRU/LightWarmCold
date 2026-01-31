@@ -20,18 +20,11 @@ static uint16_t currentColorTemperature;
 static const char *TAG = "light_driver";
 
 // Set current brightness & color temperature
-static void led_driver_set_current(uint8_t brightness, int16_t temperature) {
-    if (brightness != 0xff) {
-        currentBrighness = brightness;
-    }
-    if (temperature != -1) {
-        currentColorTemperature = temperature;
-    }
-
+static void led_driver_set_current() {
     if (!currentPowerState) {
         return;
     }
-    led_driver_set_pwm(brightness, temperature);
+    led_driver_set_pwm(currentBrighness, currentColorTemperature);
 }
 
 static void led_driver_set_power(bool power)
@@ -42,7 +35,9 @@ static void led_driver_set_power(bool power)
         // led_driver_set_pwm(0, currentColorTemperature);
     } else {
         // Power off
-        led_driver_set_current(0, currentColorTemperature);
+
+        currentBrighness = 0;
+        led_driver_set_current();
     }
     currentPowerState = power;
 }
@@ -51,14 +46,16 @@ static void app_driver_light_set_brightness(uint8_t brightness)
 {
     // int value = REMAP_TO_RANGE(brightness, MATTER_BRIGHTNESS, STANDARD_BRIGHTNESS);
     ESP_LOGI(TAG, "LED set brightness: %d", brightness);
-    led_driver_set_current(brightness, -1);
+    currentBrighness = brightness;
+    led_driver_set_current();
 }
 
 static void app_driver_light_set_temperature(uint16_t mireds)
 {
     uint32_t kelvin = REMAP_TO_RANGE_INVERSE(mireds, STANDARD_TEMPERATURE_FACTOR);
-    ESP_LOGI(TAG, "LED set temperature: %ld, %u", kelvin, mireds);
-    led_driver_set_current(0xff, mireds);
+    ESP_LOGI(TAG, "LED set temperature: %ldK, %u", kelvin, mireds);
+    currentColorTemperature = mireds;
+    led_driver_set_current();
 }
 
 void app_driver_attribute_update(uint32_t cluster_id,

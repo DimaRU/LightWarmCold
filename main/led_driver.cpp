@@ -19,7 +19,6 @@ static const char *TAG = "led_driver";
 
 static uint16_t MiredsWarm;
 static uint16_t MiredsCold;
-static uint32_t currentPWM[2];
 
 static QueueHandle_t fadeEventQueue;
 
@@ -70,6 +69,8 @@ static void fadeTask( void *pvParameters ) {
 }
 
 static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM) {
+    static uint32_t currentPWM[2] = { 0, 0 };
+
     uint32_t pwm[3];
     pwm[0] = warmPWM;
     pwm[1] = coldPWM;
@@ -90,7 +91,7 @@ static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM) {
     }
     pwm[2] = fadeTime;
 
-    ESP_LOGI(TAG, "warmCoeff: %lu, coldCoeff: %lu", warmPWM, coldPWM);
+    ESP_LOGI(TAG, "pwm: %lu, warmCoeff: %lu, coldCoeff: %lu, time: %lu", uint32_t(1 << ledc_timer.duty_resolution), warmPWM, coldPWM, fadeTime);
     
     xQueueSend(fadeEventQueue, pwm, 0);
 }
