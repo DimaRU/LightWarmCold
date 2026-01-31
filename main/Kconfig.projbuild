@@ -21,6 +21,13 @@ menu "LightWarmCold Matter Configuration"
         default 4600
         help 
             Startup color temperature in kelvins
+
+    config FADE_TIME
+        int "Fade time"
+        default 500
+        help
+            Fade time for full brightness range in ms
+
 endmenu
 
 menu "LightWarmCold Hardware Configuration"

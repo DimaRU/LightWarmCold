@@ -49,6 +49,8 @@ static ledc_channel_config_t ledcChannel[2] = {
     },
 };
 
+static uint32_t PWMBase = 1 << LEDC_TIMER_12_BIT;
+
 static void fadeTask( void *pvParameters ) {
     uint32_t pwm[3];
     int fadeTime;
@@ -79,9 +81,9 @@ static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM) {
     for(int chan = 0; chan < 2; chan++) {
         uint32_t time = 0;
         if (currentPWM[chan] > pwm[chan]) {
-            time = (currentPWM[chan] - pwm[chan]) / 5;
+            time = (currentPWM[chan] - pwm[chan]) * CONFIG_FADE_TIME / PWMBase;
         } else {
-            time = (pwm[chan] - currentPWM[chan]) / 5;
+            time = (pwm[chan] - currentPWM[chan]) * CONFIG_FADE_TIME / PWMBase;
         }
         // const int duty = CIEL_10_12[fade->target];
         currentPWM[chan] = pwm[chan];
@@ -91,7 +93,7 @@ static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM) {
     }
     pwm[2] = fadeTime;
 
-    ESP_LOGI(TAG, "pwm: %lu, warmCoeff: %lu, coldCoeff: %lu, time: %lu", uint32_t(1 << ledc_timer.duty_resolution), warmPWM, coldPWM, fadeTime);
+    ESP_LOGI(TAG, "pwm: %lu, warmCoeff: %lu, coldCoeff: %lu, time: %lu", PWMBase, warmPWM, coldPWM, fadeTime);
     
     xQueueSend(fadeEventQueue, pwm, 0);
 }
@@ -100,12 +102,11 @@ static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM) {
 
 void led_driver_set_pwm(uint8_t brightness, int16_t temperature) {
     uint32_t topMargin = 2;
-    uint32_t PWMBase = 1 << ledc_timer.duty_resolution;
     uint32_t miredsNeutral = (MiredsWarm + MiredsCold) / 2;
     
     uint32_t tempCoeff = (temperature - MiredsCold) * PWMBase / (MiredsWarm - MiredsCold);
     uint32_t brightnessCoeff = uint32_t(brightness) * PWMBase / uint32_t(MATTER_BRIGHTNESS);
-    
+
     uint32_t warmPWM;
     uint32_t coldPWM;
     
