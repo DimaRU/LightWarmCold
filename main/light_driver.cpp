@@ -141,6 +141,19 @@ void app_driver_light_set_defaults(uint16_t endpoint_id)
     app_driver_light_set_brightness(val.val.u8);
 }
 
+#if CONFIG_NIGHT_LED_CLUSTER
+void app_driver_night_led_set_defaults(uint16_t endpoint_id)
+{
+    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
+    attribute_t *attribute;
+
+    /* Setting power */
+    attribute = attribute::get(endpoint_id, OnOff::Id, OnOff::Attributes::OnOff::Id);
+    attribute::get_val(attribute, &val);
+    led_driver_set_night_led(val.val.b);
+}
+#endif
+
 void app_driver_light_init() {
     led_driver_init();
 }

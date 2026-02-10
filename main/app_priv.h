@@ -78,6 +78,18 @@ void app_driver_attribute_update_night(uint32_t cluster_id,
  */
 void app_driver_light_set_defaults(uint16_t endpoint_id);
 
+#if CONFIG_NIGHT_LED_CLUSTER
+/** Set defaults for night led driver
+ *
+ * Set the attribute drivers to their default values from the created data model.
+ *
+ * @param[in] endpoint_id Endpoint ID of the driver.
+ *
+ */
+void app_driver_night_led_set_defaults(uint16_t endpoint_id);
+#endif
+
+
 // Matter (chip) modules logging
 void matterLoggingCallback(const char * module, uint8_t category, const char * msg, va_list args);
 

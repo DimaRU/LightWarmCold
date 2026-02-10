@@ -329,17 +329,17 @@ extern "C" void app_main()
     
     cluster_t *color_control_cluster = cluster::get(endpoint, ColorControl::Id);
     attribute_t *color_temp_attribute = attribute::get(color_control_cluster, ColorControl::Attributes::ColorTemperatureMireds::Id);
+    attribute::set_deferred_persistence(color_temp_attribute);
     
 #if CONFIG_NIGHT_LED_CLUSTER
     esp_matter::endpoint::on_off_light::config_t night_light_config;
+    night_light_config.on_off.on_off = DEFAULT_POWER;
+    night_light_config.on_off_lighting.start_up_on_off = nullptr;
     endpoint_t *night_endpoint = esp_matter::endpoint::on_off_light::create(node, &night_light_config, ENDPOINT_FLAG_NONE, nullptr);
     ABORT_APP_ON_FAILURE(night_endpoint != nullptr, ESP_LOGE(TAG, "Failed to create on/off light endpoint"));
     night_light_endpoint_id = endpoint::get_id(night_endpoint);
     ESP_LOGI(TAG, "Night light created with endpoint_id %d", night_light_endpoint_id);
 #endif
-    
-    
-    attribute::set_deferred_persistence(color_temp_attribute);
 
     // Install button driver
     app_driver_button_init(&light_endpoint_id);
@@ -382,6 +382,9 @@ extern "C" void app_main()
 
     /* Starting driver with default values */
     app_driver_light_set_defaults(light_endpoint_id);
+#if CONFIG_NIGHT_LED_CLUSTER
+    app_driver_night_led_set_defaults(night_light_endpoint_id);
+#endif
 
 #if CONFIG_ENABLE_ENCRYPTED_OTA
     err = esp_matter_ota_requestor_encrypted_init(s_decryption_key, s_decryption_key_len);
