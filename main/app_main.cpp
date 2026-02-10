@@ -334,7 +334,7 @@ extern "C" void app_main()
     esp_matter::endpoint::on_off_light::config_t night_light_config;
     endpoint_t *night_endpoint = esp_matter::endpoint::on_off_light::create(node, &night_light_config, ENDPOINT_FLAG_NONE, nullptr);
     ABORT_APP_ON_FAILURE(night_endpoint != nullptr, ESP_LOGE(TAG, "Failed to create on/off light endpoint"));
-    night_light_endpoint_id = endpoint::get_id(endpoint);
+    night_light_endpoint_id = endpoint::get_id(night_endpoint);
     ESP_LOGI(TAG, "Night light created with endpoint_id %d", night_light_endpoint_id);
 #endif
     

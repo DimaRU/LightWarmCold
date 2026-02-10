@@ -124,6 +124,7 @@ void led_driver_set_pwm(uint8_t brightness, int16_t temperature) {
 #if CONFIG_NIGHT_LED_CLUSTER
 
 void led_driver_set_night_led(bool on) {
+    ESP_LOGI(TAG, "Night led: %s", on ? "on" : "off");
     gpio_set_level(gpio_num_t(CONFIG_NIGHT_LED_GPIO), on);
 }
 #endif
