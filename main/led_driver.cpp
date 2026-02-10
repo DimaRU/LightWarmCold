@@ -121,6 +121,15 @@ void led_driver_set_pwm(uint8_t brightness, int16_t temperature) {
     led_driver_queue_pwm(warmPWM, coldPWM);
 }
 
+#if CONFIG_NIGHT_LED_CLUSTER
+
+void led_driver_set_night_led(bool on) {
+    gpio_set_level(gpio_num_t(CONFIG_NIGHT_LED_GPIO), on);
+}
+#endif
+
+
+
 void led_driver_init()
 {
     ledc_timer_config(&ledc_timer);
@@ -134,6 +143,13 @@ void led_driver_init()
     xTaskCreate(fadeTask, "fadeTask", 2048, nullptr, 15, nullptr);
     
     ledc_fade_func_install(0);
+
+#if CONFIG_NIGHT_LED_CLUSTER
+    // Set pin for output
+    gpio_reset_pin(gpio_num_t(CONFIG_NIGHT_LED_GPIO));
+    gpio_set_direction(gpio_num_t(CONFIG_NIGHT_LED_GPIO), GPIO_MODE_OUTPUT);
+
+#endif
 }
 
 void led_driver_set_mireds_bounds(uint16_t warm, uint16_t cool)

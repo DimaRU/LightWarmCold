@@ -27,7 +27,7 @@ static void led_driver_set_current() {
     led_driver_set_pwm(currentBrighness, currentColorTemperature);
 }
 
-static void led_driver_set_power(bool power)
+static void app_driver_light_set_power(bool power)
 {
     ESP_LOGI(TAG, "LED set power: %d", power);
     if (power) {
@@ -65,7 +65,7 @@ void app_driver_attribute_update(uint32_t cluster_id,
     switch (cluster_id) {
     case OnOff::Id:
         if (attribute_id == OnOff::Attributes::OnOff::Id) {
-            led_driver_set_power(val->val.b);
+            app_driver_light_set_power(val->val.b);
         }
         break;
     case LevelControl::Id:
@@ -80,6 +80,23 @@ void app_driver_attribute_update(uint32_t cluster_id,
         break;
     }
 }
+
+#if CONFIG_NIGHT_LED_CLUSTER
+
+void app_driver_attribute_update_night(uint32_t cluster_id,
+                                       uint32_t attribute_id,
+                                       esp_matter_attr_val_t *val)
+{
+    switch (cluster_id) {
+    case OnOff::Id:
+        if (attribute_id == OnOff::Attributes::OnOff::Id) {
+            led_driver_set_night_led(val->val.b);
+        }
+        break;
+    }
+}
+
+#endif
 
 void app_driver_light_set_defaults(uint16_t endpoint_id)
 {
@@ -116,7 +133,7 @@ void app_driver_light_set_defaults(uint16_t endpoint_id)
     /* Setting power */
     attribute = attribute::get(endpoint_id, OnOff::Id, OnOff::Attributes::OnOff::Id);
     attribute::get_val(attribute, &val);
-    led_driver_set_power(val.val.b);
+    app_driver_light_set_power(val.val.b);
 
     /* Setting brightness */
     attribute = attribute::get(endpoint_id, LevelControl::Id, LevelControl::Attributes::CurrentLevel::Id);

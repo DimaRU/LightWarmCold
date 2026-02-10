@@ -28,6 +28,12 @@ menu "LightWarmCold Matter Configuration"
         help
             Fade time for full brightness range in ms
 
+    config NIGHT_LED_CLUSTER
+        bool "Night led cluster"
+        default n
+        help 
+            Add night led on/off cluster
+
 endmenu
 
 menu "LightWarmCold Hardware Configuration"
@@ -38,6 +44,11 @@ menu "LightWarmCold Hardware Configuration"
     config LED_COLD_GPIO
         int "Cold led GPIO number"
         default 5
+
+    config NIGHT_LED_GPIO
+        int "Night led GPIO number"
+        default 0
+        depends on NIGHT_LED_CLUSTER
 
     config PWM_FREQUENCY
         int "Led PWM frequency"

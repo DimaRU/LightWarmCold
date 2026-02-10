@@ -23,7 +23,10 @@
 #include <setup_payload/SetupPayload.h>
 
 static const char *TAG = "app_main";
-uint16_t light_endpoint_id = 0;
+uint16_t light_endpoint_id;
+#if CONFIG_NIGHT_LED_CLUSTER
+uint16_t night_light_endpoint_id;
+#endif
 
 using namespace esp_matter;
 using namespace esp_matter::attribute;
@@ -221,10 +224,16 @@ static esp_err_t app_attribute_update_cb(attribute::callback_type_t type,
         return ESP_OK;
     }
     /* Driver update */
-    if (endpoint_id != light_endpoint_id) {
+    if (endpoint_id == light_endpoint_id) {
+        app_driver_attribute_update(cluster_id, attribute_id, val);
         return ESP_OK;
     }
-    app_driver_attribute_update(cluster_id, attribute_id, val);
+#if CONFIG_NIGHT_LED_CLUSTER
+    if (endpoint_id == night_light_endpoint_id) {
+        app_driver_attribute_update_night(cluster_id, attribute_id, val);
+        return ESP_OK;
+    }
+#endif
     return ESP_OK;
 }
 
@@ -273,8 +282,11 @@ extern "C" void app_main()
     // Print config
     ESP_LOGI(TAG, "Warm led pin: %i", CONFIG_LED_WARM_GPIO);
     ESP_LOGI(TAG, "Cold led pin: %i", CONFIG_LED_COLD_GPIO);
+#if CONFIG_NIGHT_LED_CLUSTER
+    ESP_LOGI(TAG, "Night led pin: %i", CONFIG_NIGHT_LED_GPIO);
+#endif
     ESP_LOGI(TAG, "Button pin: %i", CONFIG_BUTTON_GPIO);
-#if CONFIG_INDICATOR_LED_INVERT == 1
+#if CONFIG_INDICATOR_LED_INVERT
     ESP_LOGI(TAG, "Indicator led pin: %i (inverted)", CONFIG_INDICATOR_LED_GPIO);
 #else
     ESP_LOGI(TAG, "Indicator led pin: %i", CONFIG_INDICATOR_LED_GPIO);
@@ -310,7 +322,6 @@ extern "C" void app_main()
     
     light_endpoint_id = endpoint::get_id(endpoint);
     ESP_LOGI(TAG, "Light created with endpoint_id %d", light_endpoint_id);
- 
     /* Mark deferred persistence for some attributes that might be changed rapidly */
     cluster_t *level_control_cluster = cluster::get(endpoint, LevelControl::Id);
     attribute_t *current_level_attribute = attribute::get(level_control_cluster, LevelControl::Attributes::CurrentLevel::Id);
@@ -318,6 +329,16 @@ extern "C" void app_main()
     
     cluster_t *color_control_cluster = cluster::get(endpoint, ColorControl::Id);
     attribute_t *color_temp_attribute = attribute::get(color_control_cluster, ColorControl::Attributes::ColorTemperatureMireds::Id);
+    
+#if CONFIG_NIGHT_LED_CLUSTER
+    esp_matter::endpoint::on_off_light::config_t night_light_config;
+    endpoint_t *night_endpoint = esp_matter::endpoint::on_off_light::create(node, &night_light_config, ENDPOINT_FLAG_NONE, nullptr);
+    ABORT_APP_ON_FAILURE(night_endpoint != nullptr, ESP_LOGE(TAG, "Failed to create on/off light endpoint"));
+    night_light_endpoint_id = endpoint::get_id(endpoint);
+    ESP_LOGI(TAG, "Night light created with endpoint_id %d", night_light_endpoint_id);
+#endif
+    
+    
     attribute::set_deferred_persistence(color_temp_attribute);
 
     // Install button driver
