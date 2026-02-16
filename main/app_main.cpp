@@ -259,27 +259,8 @@ static void setupLogging() {
     esp_log_level_set("esp_matter_command", ESP_LOG_ERROR);
 }
 
-extern "C" void app_main()
-{
-    esp_err_t err = ESP_OK;
-
-    setupLogging();
-
-#ifdef CONFIG_XIAO_ESP32C6_EXTERNAL_ANTENNA
-    xiao_wifi_init();
-#endif
-    
-    /* Initialize the ESP NVS layer */
-    nvs_flash_init();
-
-    /* Initialize led driver */
-    app_driver_light_init();
-    indicator_driver_init();
-
-    // Indicate start
-    signalIndicator(SignalIndicator::startup);
-
-    // Print config
+// Print hardware config
+void printHardwareConfig() {
     ESP_LOGI(TAG, "Warm led pin: %i", CONFIG_LED_WARM_GPIO);
     ESP_LOGI(TAG, "Cold led pin: %i", CONFIG_LED_COLD_GPIO);
 #if CONFIG_NIGHT_LED_CLUSTER
@@ -291,14 +272,10 @@ extern "C" void app_main()
 #else
     ESP_LOGI(TAG, "Indicator led pin: %i", CONFIG_INDICATOR_LED_GPIO);
 #endif
+}
 
-    /* Create a Matter node and add the mandatory Root Node device type on endpoint 0 */
-    node::config_t node_config;
-    
-    // node handle can be used to add/modify other endpoints.
-    node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
-    ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
-    
+
+void createEndpoints(node_t *node) {
     color_temperature_light::config_t light_config;
     light_config.on_off.on_off = DEFAULT_POWER;
     light_config.on_off_lighting.start_up_on_off = nullptr;
@@ -340,6 +317,46 @@ extern "C" void app_main()
     night_light_endpoint_id = endpoint::get_id(night_endpoint);
     ESP_LOGI(TAG, "Night light created with endpoint_id %d", night_light_endpoint_id);
 #endif
+}
+
+/* Starting driver with default values */
+void restoreMatterState() {
+    app_driver_light_set_defaults(light_endpoint_id);
+#if CONFIG_NIGHT_LED_CLUSTER
+    app_driver_night_led_set_defaults(night_light_endpoint_id);
+#endif
+}
+
+extern "C" void app_main()
+{
+    esp_err_t err = ESP_OK;
+
+    setupLogging();
+
+#ifdef CONFIG_XIAO_ESP32C6_EXTERNAL_ANTENNA
+    xiao_wifi_init();
+#endif
+    
+    /* Initialize the ESP NVS layer */
+    nvs_flash_init();
+
+    /* Initialize led driver */
+    app_driver_light_init();
+    indicator_driver_init();
+
+    // Indicate start
+    signalIndicator(SignalIndicator::startup);
+
+    printHardwareConfig();
+
+    /* Create a Matter node and add the mandatory Root Node device type on endpoint 0 */
+    node::config_t node_config;
+    
+    // node handle can be used to add/modify other endpoints.
+    node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
+    ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
+    
+    createEndpoints(node);
 
     // Install button driver
     app_driver_button_init(&light_endpoint_id);
@@ -380,11 +397,7 @@ extern "C" void app_main()
         ESP_LOGI(TAG, "Device serial number: %.*s\n", val.val.a.s, val.val.a.b);
     }
 
-    /* Starting driver with default values */
-    app_driver_light_set_defaults(light_endpoint_id);
-#if CONFIG_NIGHT_LED_CLUSTER
-    app_driver_night_led_set_defaults(night_light_endpoint_id);
-#endif
+    restoreMatterState();
 
 #if CONFIG_ENABLE_ENCRYPTED_OTA
     err = esp_matter_ota_requestor_encrypted_init(s_decryption_key, s_decryption_key_len);
