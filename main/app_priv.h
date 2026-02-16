@@ -36,7 +36,7 @@ void app_driver_light_init();
  * This initializes the button driver associated with the selected board.
  *
  */
-void app_driver_button_init(uint16_t *light_endpoint_id);
+void app_driver_button_init(void (*button_toggle_callback)());
 
 /** Attribute Update for Light cluster
  *

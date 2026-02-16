@@ -237,6 +237,33 @@ static esp_err_t app_attribute_update_cb(attribute::callback_type_t type,
     return ESP_OK;
 }
 
+static void toggle_power_cb()
+{
+    uint16_t endpoint_id = light_endpoint_id;
+    uint32_t cluster_id = OnOff::Id;
+    uint32_t attribute_id = OnOff::Attributes::OnOff::Id;
+
+    attribute_t *attribute = attribute::get(endpoint_id, cluster_id, attribute_id);
+
+    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
+    attribute::get_val(attribute, &val);
+    val.val.b = !val.val.b;
+    attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+
+    if (val.val.b) {
+        cluster_id = LevelControl::Id;
+        attribute_id = LevelControl::Attributes::CurrentLevel::Id;
+        attribute = attribute::get(endpoint_id, cluster_id, attribute_id);
+        attribute::get_val(attribute, &val);
+        auto level = val.val.u8;
+        val.val.u8 = 1;
+        attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+        val.val.u8 = level;
+        attribute::update(endpoint_id, cluster_id, attribute_id, &val);
+    }
+}
+
+
 static void setupLogging() {
     chip::Logging::SetLogRedirectCallback(&matterLoggingCallback);
     
@@ -356,10 +383,11 @@ extern "C" void app_main()
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
     ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
     
+    // Create endpoints
     createEndpoints(node);
 
     // Install button driver
-    app_driver_button_init(&light_endpoint_id);
+    app_driver_button_init(toggle_power_cb);
 
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD && CHIP_DEVICE_CONFIG_ENABLE_WIFI_STATION
