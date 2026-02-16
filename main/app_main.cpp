@@ -23,10 +23,6 @@
 #include <setup_payload/SetupPayload.h>
 
 static const char *TAG = "app_main";
-uint16_t light_endpoint_id;
-#if CONFIG_NIGHT_LED_CLUSTER
-uint16_t night_light_endpoint_id;
-#endif
 
 using namespace esp_matter;
 using namespace esp_matter::attribute;
@@ -200,6 +196,10 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
     }
 }
 
+static void button_reset_cb() {
+    esp_matter::factory_reset();
+}
+
 // This callback is invoked when clients interact with the Identify Cluster.
 // In the callback implementation, an endpoint can identify itself. (e.g., by flashing an LED or light).
 static esp_err_t app_identification_cb(identification::callback_type_t type, uint16_t endpoint_id, uint8_t effect_id,
@@ -220,49 +220,11 @@ static esp_err_t app_attribute_update_cb(attribute::callback_type_t type,
                                          esp_matter_attr_val_t *val, 
                                          void *priv_data)
 {
-    if (type != PRE_UPDATE) {
-        return ESP_OK;
+    if (type == PRE_UPDATE) {
+        app_driver_attribute_update(endpoint_id, cluster_id, attribute_id, val);
     }
-    /* Driver update */
-    if (endpoint_id == light_endpoint_id) {
-        app_driver_attribute_update(cluster_id, attribute_id, val);
-        return ESP_OK;
-    }
-#if CONFIG_NIGHT_LED_CLUSTER
-    if (endpoint_id == night_light_endpoint_id) {
-        app_driver_attribute_update_night(cluster_id, attribute_id, val);
-        return ESP_OK;
-    }
-#endif
     return ESP_OK;
 }
-
-static void toggle_power_cb()
-{
-    uint16_t endpoint_id = light_endpoint_id;
-    uint32_t cluster_id = OnOff::Id;
-    uint32_t attribute_id = OnOff::Attributes::OnOff::Id;
-
-    attribute_t *attribute = attribute::get(endpoint_id, cluster_id, attribute_id);
-
-    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
-    attribute::get_val(attribute, &val);
-    val.val.b = !val.val.b;
-    attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-
-    if (val.val.b) {
-        cluster_id = LevelControl::Id;
-        attribute_id = LevelControl::Attributes::CurrentLevel::Id;
-        attribute = attribute::get(endpoint_id, cluster_id, attribute_id);
-        attribute::get_val(attribute, &val);
-        auto level = val.val.u8;
-        val.val.u8 = 1;
-        attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-        val.val.u8 = level;
-        attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-    }
-}
-
 
 static void setupLogging() {
     chip::Logging::SetLogRedirectCallback(&matterLoggingCallback);
@@ -286,74 +248,6 @@ static void setupLogging() {
     esp_log_level_set("esp_matter_command", ESP_LOG_ERROR);
 }
 
-// Print hardware config
-void printHardwareConfig() {
-    ESP_LOGI(TAG, "Warm led pin: %i", CONFIG_LED_WARM_GPIO);
-    ESP_LOGI(TAG, "Cold led pin: %i", CONFIG_LED_COLD_GPIO);
-#if CONFIG_NIGHT_LED_CLUSTER
-    ESP_LOGI(TAG, "Night led pin: %i", CONFIG_NIGHT_LED_GPIO);
-#endif
-    ESP_LOGI(TAG, "Button pin: %i", CONFIG_BUTTON_GPIO);
-#if CONFIG_INDICATOR_LED_INVERT
-    ESP_LOGI(TAG, "Indicator led pin: %i (inverted)", CONFIG_INDICATOR_LED_GPIO);
-#else
-    ESP_LOGI(TAG, "Indicator led pin: %i", CONFIG_INDICATOR_LED_GPIO);
-#endif
-}
-
-
-void createEndpoints(node_t *node) {
-    color_temperature_light::config_t light_config;
-    light_config.on_off.on_off = DEFAULT_POWER;
-    light_config.on_off_lighting.start_up_on_off = nullptr;
-    light_config.level_control.current_level = CONFIG_DEFAULT_BRIGHTNESS;
-    light_config.level_control.on_level = nullptr;
-    light_config.level_control_lighting.start_up_current_level = nullptr;
-    // light_config.level_control.options = (uint8_t)LevelControl::OptionsBitmap::kCoupleColorTempToLevel + (uint8_t)LevelControl::OptionsBitmap::kCoupleColorTempToLevel;
- 
-    light_config.color_control.color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
-    light_config.color_control.enhanced_color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
- 
-    light_config.color_control_color_temperature.color_temp_physical_max_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_WARM, MATTER_TEMPERATURE_FACTOR);
-    light_config.color_control_color_temperature.color_temp_physical_min_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_COLD, MATTER_TEMPERATURE_FACTOR);
-    light_config.color_control_color_temperature.couple_color_temp_to_level_min_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_COLD, MATTER_TEMPERATURE_FACTOR);
-    light_config.color_control_color_temperature.start_up_color_temperature_mireds = nullptr;
-    ESP_LOGI(TAG, "Color temp min - max: %u - %u", light_config.color_control_color_temperature.color_temp_physical_min_mireds, light_config.color_control_color_temperature.color_temp_physical_max_mireds);
-
-    // endpoint handles can be used to add/modify clusters.
-    endpoint_t *endpoint = color_temperature_light::create(node, &light_config, ENDPOINT_FLAG_NONE, nullptr);
-    ABORT_APP_ON_FAILURE(endpoint != nullptr, ESP_LOGE(TAG, "Failed to create color temperature light endpoint"));
-    
-    light_endpoint_id = endpoint::get_id(endpoint);
-    ESP_LOGI(TAG, "Light created with endpoint_id %d", light_endpoint_id);
-    /* Mark deferred persistence for some attributes that might be changed rapidly */
-    cluster_t *level_control_cluster = cluster::get(endpoint, LevelControl::Id);
-    attribute_t *current_level_attribute = attribute::get(level_control_cluster, LevelControl::Attributes::CurrentLevel::Id);
-    attribute::set_deferred_persistence(current_level_attribute);
-    
-    cluster_t *color_control_cluster = cluster::get(endpoint, ColorControl::Id);
-    attribute_t *color_temp_attribute = attribute::get(color_control_cluster, ColorControl::Attributes::ColorTemperatureMireds::Id);
-    attribute::set_deferred_persistence(color_temp_attribute);
-    
-#if CONFIG_NIGHT_LED_CLUSTER
-    esp_matter::endpoint::on_off_light::config_t night_light_config;
-    night_light_config.on_off.on_off = DEFAULT_POWER;
-    night_light_config.on_off_lighting.start_up_on_off = nullptr;
-    endpoint_t *night_endpoint = esp_matter::endpoint::on_off_light::create(node, &night_light_config, ENDPOINT_FLAG_NONE, nullptr);
-    ABORT_APP_ON_FAILURE(night_endpoint != nullptr, ESP_LOGE(TAG, "Failed to create on/off light endpoint"));
-    night_light_endpoint_id = endpoint::get_id(night_endpoint);
-    ESP_LOGI(TAG, "Night light created with endpoint_id %d", night_light_endpoint_id);
-#endif
-}
-
-/* Starting driver with default values */
-void restoreMatterState() {
-    app_driver_light_set_defaults(light_endpoint_id);
-#if CONFIG_NIGHT_LED_CLUSTER
-    app_driver_night_led_set_defaults(night_light_endpoint_id);
-#endif
-}
-
 extern "C" void app_main()
 {
     esp_err_t err = ESP_OK;
@@ -374,8 +268,6 @@ extern "C" void app_main()
     // Indicate start
     signalIndicator(SignalIndicator::startup);
 
-    printHardwareConfig();
-
     /* Create a Matter node and add the mandatory Root Node device type on endpoint 0 */
     node::config_t node_config;
     
@@ -387,7 +279,7 @@ extern "C" void app_main()
     createEndpoints(node);
 
     // Install button driver
-    app_driver_button_init(toggle_power_cb);
+    app_driver_button_init(button_toggle_cb, button_reset_cb);
 
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD && CHIP_DEVICE_CONFIG_ENABLE_WIFI_STATION
