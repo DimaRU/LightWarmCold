@@ -24,12 +24,8 @@
 
 typedef void *app_driver_handle_t;
 
-/** Initialize the light driver
- *
- * This initializes the light driver associated with the selected board.
- *
- */
-void app_driver_light_init();
+// Initialize the device driver
+void app_driver_init();
 
 /** Initialize the button driver
  *
@@ -38,7 +34,7 @@ void app_driver_light_init();
  */
 void app_driver_button_init(void (*button_toggle_callback)(), void (*button_reset_callback)());
 
-/** Attribute Update for Light cluster
+/** Attribute Update for device cluster
  *
  * This API should be called to update the driver for the attribute being updated.
  * This is usually called from the common `app_attribute_update_cb()`.
@@ -54,18 +50,14 @@ void app_driver_attribute_update(uint16_t endpoint_id,
                                  uint32_t attribute_id,
                                  esp_matter_attr_val_t *val);
 
+// Set defaults for device driver
+void app_driver_restore_matter_state();
 
-// /** Set defaults for light driver
-//  *
-//  * Set the attribute drivers to their default values from the created data model.
-//  *
-//  */
-// void app_driver_light_set_defaults(uint16_t endpoint_id);
-
-void restoreMatterState();
 // Button toggle callback
 void button_toggle_cb();
-void createEndpoints(esp_matter::node_t *node);
+
+// Create device control endpoints
+void app_driver_create_endpoints(esp_matter::node_t *node);
 
 // Matter (chip) modules logging
 void matterLoggingCallback(const char * module, uint8_t category, const char * msg, va_list args);

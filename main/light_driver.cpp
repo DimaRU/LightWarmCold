@@ -162,7 +162,7 @@ static void app_driver_night_led_set_defaults(uint16_t endpoint_id)
 }
 #endif
 
-void createEndpoints(esp_matter::node_t *node) {
+void app_driver_create_endpoints(esp_matter::node_t *node) {
     color_temperature_light::config_t light_config;
     light_config.on_off.on_off = DEFAULT_POWER;
     light_config.on_off_lighting.start_up_on_off = nullptr;
@@ -207,7 +207,7 @@ void createEndpoints(esp_matter::node_t *node) {
 }
 
 /* Starting driver with default values */
-void restoreMatterState() {
+void app_driver_restore_matter_state() {
     app_driver_light_set_defaults(light_endpoint_id);
 #if CONFIG_NIGHT_LED_CLUSTER
     app_driver_night_led_set_defaults(night_light_endpoint_id);
@@ -256,7 +256,7 @@ static void printHardwareConfig() {
 #endif
 }
 
-void app_driver_light_init() {
+void app_driver_init() {
     printHardwareConfig();
     led_driver_init();
 }

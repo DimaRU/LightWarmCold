@@ -262,7 +262,7 @@ extern "C" void app_main()
     nvs_flash_init();
 
     /* Initialize led driver */
-    app_driver_light_init();
+    app_driver_init();
     indicator_driver_init();
 
     // Indicate start
@@ -276,7 +276,7 @@ extern "C" void app_main()
     ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
     
     // Create endpoints
-    createEndpoints(node);
+    app_driver_create_endpoints(node);
 
     // Install button driver
     app_driver_button_init(button_toggle_cb, button_reset_cb);
@@ -317,7 +317,7 @@ extern "C" void app_main()
         ESP_LOGI(TAG, "Device serial number: %.*s\n", val.val.a.s, val.val.a.b);
     }
 
-    restoreMatterState();
+    app_driver_restore_matter_state();
 
 #if CONFIG_ENABLE_ENCRYPTED_OTA
     err = esp_matter_ota_requestor_encrypted_init(s_decryption_key, s_decryption_key_len);
