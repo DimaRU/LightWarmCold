@@ -4,11 +4,11 @@
 
 #include <esp_log.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include <esp_matter.h>
 #include <common_macros.h>
 #include <app_priv.h>
+#include "light_driver.h"
 #include "led_driver.h"
 
 using namespace esp_matter;
@@ -118,7 +118,7 @@ static void app_driver_light_set_defaults(uint16_t endpoint_id)
     {
     case (uint8_t)ColorControl::ColorMode::kColorTemperature:
     {
-        /* Setting temperature */
+        // Temperature bounds
         ESP_LOGI(TAG, "LED set default temperature");
         attribute = attribute::get(endpoint_id, ColorControl::Id, ColorControl::Attributes::ColorTempPhysicalMaxMireds::Id);
         attribute::get_val(attribute, &val);
@@ -126,7 +126,11 @@ static void app_driver_light_set_defaults(uint16_t endpoint_id)
         attribute = attribute::get(endpoint_id, ColorControl::Id, ColorControl::Attributes::ColorTempPhysicalMinMireds::Id);
         attribute::get_val(attribute, &val);
         auto miredsCold = val.val.u16;
-        led_driver_set_mireds_bounds(miredsWarm, miredsCold);
+        // Brightness bounds
+        attribute = attribute::get(endpoint_id, LevelControl::Id, LevelControl::Attributes::MaxLevel::Id);
+        attribute::get_val(attribute, &val);
+        auto maxBrightness = val.val.u8;
+        led_driver_set_bounds(miredsWarm, miredsCold, maxBrightness);
 
         attribute = attribute::get(endpoint_id, ColorControl::Id, ColorControl::Attributes::ColorTemperatureMireds::Id);
         attribute::get_val(attribute, &val);
@@ -169,8 +173,11 @@ void app_driver_create_endpoints(esp_matter::node_t *node) {
     light_config.level_control.current_level = CONFIG_DEFAULT_BRIGHTNESS;
     light_config.level_control.on_level = nullptr;
     light_config.level_control_lighting.start_up_current_level = nullptr;
+    light_config.level_control_lighting.min_level = 1;
+    light_config.level_control_lighting.max_level = MATTER_BRIGHTNESS;
     // light_config.level_control.options = (uint8_t)LevelControl::OptionsBitmap::kCoupleColorTempToLevel + (uint8_t)LevelControl::OptionsBitmap::kCoupleColorTempToLevel;
- 
+     ESP_LOGI(TAG, "Brighness min - max: %u - %u", light_config.level_control_lighting.min_level, light_config.level_control_lighting.max_level);
+
     light_config.color_control.color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
     light_config.color_control.enhanced_color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
  

@@ -4,7 +4,6 @@
 
 #include <esp_log.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include <common_macros.h>
 #include "app_priv.h"
@@ -17,6 +16,7 @@ static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM);
 
 static const char *TAG = "led_driver";
 
+static uint8_t MaxBrightness;
 static uint16_t MiredsWarm;
 static uint16_t MiredsCold;
 
@@ -105,7 +105,7 @@ void led_driver_set_pwm(uint8_t brightness, int16_t temperature) {
     uint32_t miredsNeutral = (MiredsWarm + MiredsCold) / 2;
     
     uint32_t tempCoeff = (temperature - MiredsCold) * PWMBase / (MiredsWarm - MiredsCold);
-    uint32_t brightnessCoeff = uint32_t(brightness) * PWMBase / uint32_t(MATTER_BRIGHTNESS);
+    uint32_t brightnessCoeff = uint32_t(brightness) * PWMBase / uint32_t(MaxBrightness);
 
     uint32_t warmPWM;
     uint32_t coldPWM;
@@ -153,8 +153,9 @@ void led_driver_init()
 #endif
 }
 
-void led_driver_set_mireds_bounds(uint16_t warm, uint16_t cool)
+void led_driver_set_bounds(uint16_t warm, uint16_t cool, uint8_t maxBrightness)
 {
     MiredsWarm = warm;
     MiredsCold = cool;
+    MaxBrightness = maxBrightness;
 }

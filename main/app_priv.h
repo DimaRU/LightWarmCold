@@ -11,19 +11,6 @@
 #include "esp_openthread_types.h"
 #endif
 
-/** Standard max values (used for remapping attributes) */
-#define STANDARD_BRIGHTNESS 255
-#define STANDARD_TEMPERATURE_FACTOR 1000000
-
-/** Matter max values (used for remapping attributes) */
-#define MATTER_BRIGHTNESS 254
-#define MATTER_TEMPERATURE_FACTOR 1000000
-
-/** Default attribute values used during initialization */
-#define DEFAULT_POWER true
-
-typedef void *app_driver_handle_t;
-
 // Initialize the device driver
 void app_driver_init();
 
