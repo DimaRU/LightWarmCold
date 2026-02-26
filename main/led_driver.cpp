@@ -163,8 +163,8 @@ void led_driver_set_bounds(uint16_t warm, uint16_t cold, uint8_t minBrightness, 
     MinBrightness = minBrightness;
     MaxBrightness = maxBrightness;
     
-    ESP_LOGI(TAG, "Brighness min - max: %u - %u", minBrightness, maxBrightness);
-    ESP_LOGI(TAG, "Color temp min - max: %u - %u", cold, warm);
+    ESP_LOGI(TAG, "Brightness min/max: %u/%u", minBrightness, maxBrightness);
+    ESP_LOGI(TAG, "Color temp min/max: %u/%u", cold, warm);
 
     ESP_LOGI(TAG, "pwmBase: %lu", PWMBase);
 }

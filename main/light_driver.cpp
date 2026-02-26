@@ -17,7 +17,7 @@ using namespace esp_matter::endpoint;
 using namespace chip::app::Clusters;
 
 static bool currentPowerState = false;
-static uint8_t currentBrighness;
+static uint8_t currentBrightness;
 static uint16_t currentColorTemperature;
 static uint16_t light_endpoint_id;
 #if CONFIG_NIGHT_LED_CLUSTER
@@ -31,7 +31,7 @@ static void led_driver_set_current() {
     if (!currentPowerState) {
         return;
     }
-    led_driver_set_pwm(currentBrighness, currentColorTemperature);
+    led_driver_set_pwm(currentBrightness, currentColorTemperature);
 }
 
 static void app_driver_light_set_power(bool power)
@@ -39,11 +39,11 @@ static void app_driver_light_set_power(bool power)
     ESP_LOGI(TAG, "LED set power: %d", power);
     if (power) {
         // Power on
-        // led_driver_set_pwm(currentBrighness, currentColorTemperature);
+        // led_driver_set_pwm(currentBrightness, currentColorTemperature);
     } else {
         // Power off
 
-        // currentBrighness = 0;
+        // currentBrightness = 0;
         led_driver_set_pwm(0, currentColorTemperature);
     }
     currentPowerState = power;
@@ -53,7 +53,7 @@ static void app_driver_light_set_brightness(uint8_t brightness)
 {
     // int value = REMAP_TO_RANGE(brightness, MATTER_BRIGHTNESS, STANDARD_BRIGHTNESS);
     ESP_LOGI(TAG, "LED set brightness: %d", brightness);
-    currentBrighness = brightness;
+    currentBrightness = brightness;
 
     led_driver_set_current();
 }
