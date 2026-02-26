@@ -6,8 +6,8 @@
 #include <stdlib.h>
 
 #include <esp_matter.h>
-#include <common_macros.h>
-#include <app_priv.h>
+#include "common_macros.h"
+#include "app_priv.h"
 #include "light_driver.h"
 #include "led_driver.h"
 
@@ -39,12 +39,12 @@ static void app_driver_light_set_power(bool power)
     ESP_LOGI(TAG, "LED set power: %d", power);
     if (power) {
         // Power on
-        // led_driver_set_pwm(0, currentColorTemperature);
+        // led_driver_set_pwm(currentBrighness, currentColorTemperature);
     } else {
         // Power off
 
-        currentBrighness = 0;
-        led_driver_set_current();
+        // currentBrighness = 0;
+        led_driver_set_pwm(0, currentColorTemperature);
     }
     currentPowerState = power;
 }
@@ -54,6 +54,7 @@ static void app_driver_light_set_brightness(uint8_t brightness)
     // int value = REMAP_TO_RANGE(brightness, MATTER_BRIGHTNESS, STANDARD_BRIGHTNESS);
     ESP_LOGI(TAG, "LED set brightness: %d", brightness);
     currentBrighness = brightness;
+
     led_driver_set_current();
 }
 
@@ -118,22 +119,33 @@ static void app_driver_light_set_defaults(uint16_t endpoint_id)
     {
     case (uint8_t)ColorControl::ColorMode::kColorTemperature:
     {
+        // Brightness bounds
+        uint8_t minBrightness = 1;
+        attribute = attribute::get(endpoint_id, LevelControl::Id, LevelControl::Attributes::MinLevel::Id);
+        if (attribute != nullptr) {
+            attribute::get_val(attribute, &val);
+            minBrightness = val.val.u8;
+        }
+
+        uint8_t maxBrightness = MATTER_BRIGHTNESS;
+        attribute = attribute::get(endpoint_id, LevelControl::Id, LevelControl::Attributes::MaxLevel::Id);
+        if (attribute != nullptr) {
+            attribute::get_val(attribute, &val);
+            maxBrightness = val.val.u8;
+        }
         // Temperature bounds
-        ESP_LOGI(TAG, "LED set default temperature");
         attribute = attribute::get(endpoint_id, ColorControl::Id, ColorControl::Attributes::ColorTempPhysicalMaxMireds::Id);
         attribute::get_val(attribute, &val);
         auto miredsWarm = val.val.u16;
         attribute = attribute::get(endpoint_id, ColorControl::Id, ColorControl::Attributes::ColorTempPhysicalMinMireds::Id);
         attribute::get_val(attribute, &val);
         auto miredsCold = val.val.u16;
-        // Brightness bounds
-        attribute = attribute::get(endpoint_id, LevelControl::Id, LevelControl::Attributes::MaxLevel::Id);
-        attribute::get_val(attribute, &val);
-        auto maxBrightness = val.val.u8;
-        led_driver_set_bounds(miredsWarm, miredsCold, maxBrightness);
-
+        
+        led_driver_set_bounds(miredsWarm, miredsCold, minBrightness, maxBrightness);
+        
         attribute = attribute::get(endpoint_id, ColorControl::Id, ColorControl::Attributes::ColorTemperatureMireds::Id);
         attribute::get_val(attribute, &val);
+        ESP_LOGI(TAG, "LED set default temperature");
         app_driver_light_set_temperature(val.val.u16);
         break;
     }
@@ -175,17 +187,15 @@ void app_driver_create_endpoints(esp_matter::node_t *node) {
     light_config.level_control_lighting.start_up_current_level = nullptr;
     light_config.level_control_lighting.min_level = 1;
     light_config.level_control_lighting.max_level = MATTER_BRIGHTNESS;
-    // light_config.level_control.options = (uint8_t)LevelControl::OptionsBitmap::kCoupleColorTempToLevel + (uint8_t)LevelControl::OptionsBitmap::kCoupleColorTempToLevel;
-     ESP_LOGI(TAG, "Brighness min - max: %u - %u", light_config.level_control_lighting.min_level, light_config.level_control_lighting.max_level);
-
+    light_config.level_control.options = (uint8_t)LevelControl::OptionsBitmap::kExecuteIfOff; // (uint8_t)LevelControl::OptionsBitmap::kCoupleColorTempToLevel | 
+    
     light_config.color_control.color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
     light_config.color_control.enhanced_color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
- 
+    
     light_config.color_control_color_temperature.color_temp_physical_max_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_WARM, MATTER_TEMPERATURE_FACTOR);
     light_config.color_control_color_temperature.color_temp_physical_min_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_COLD, MATTER_TEMPERATURE_FACTOR);
     light_config.color_control_color_temperature.couple_color_temp_to_level_min_mireds = REMAP_TO_RANGE_INVERSE(CONFIG_COLOR_TEMP_COLD, MATTER_TEMPERATURE_FACTOR);
     light_config.color_control_color_temperature.start_up_color_temperature_mireds = nullptr;
-    ESP_LOGI(TAG, "Color temp min - max: %u - %u", light_config.color_control_color_temperature.color_temp_physical_min_mireds, light_config.color_control_color_temperature.color_temp_physical_max_mireds);
 
     // endpoint handles can be used to add/modify clusters.
     endpoint_t *endpoint = color_temperature_light::create(node, &light_config, ENDPOINT_FLAG_NONE, nullptr);
@@ -193,11 +203,19 @@ void app_driver_create_endpoints(esp_matter::node_t *node) {
     
     light_endpoint_id = endpoint::get_id(endpoint);
     ESP_LOGI(TAG, "Light created with endpoint_id %d", light_endpoint_id);
-    /* Mark deferred persistence for some attributes that might be changed rapidly */
+    
+    // Mark deferred persistence for some attributes that might be changed rapidly
     cluster_t *level_control_cluster = cluster::get(endpoint, LevelControl::Id);
     attribute_t *current_level_attribute = attribute::get(level_control_cluster, LevelControl::Attributes::CurrentLevel::Id);
     attribute::set_deferred_persistence(current_level_attribute);
-    
+
+    // Add brightness level min/max, if needed
+    if (light_config.level_control_lighting.min_level != 1 ||
+        light_config.level_control_lighting.min_level != MATTER_BRIGHTNESS) {
+        esp_matter::attribute::create(level_control_cluster, LevelControl::Attributes::MinLevel::Id, MATTER_ATTRIBUTE_FLAG_READABLE, esp_matter_uint8(light_config.level_control_lighting.min_level));
+        esp_matter::attribute::create(level_control_cluster, LevelControl::Attributes::MaxLevel::Id, MATTER_ATTRIBUTE_FLAG_READABLE, esp_matter_uint8(light_config.level_control_lighting.max_level));
+    }
+
     cluster_t *color_control_cluster = cluster::get(endpoint, ColorControl::Id);
     attribute_t *color_temp_attribute = attribute::get(color_control_cluster, ColorControl::Attributes::ColorTemperatureMireds::Id);
     attribute::set_deferred_persistence(color_temp_attribute);

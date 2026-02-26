@@ -16,6 +16,7 @@ static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM);
 
 static const char *TAG = "led_driver";
 
+static uint8_t MinBrightness;
 static uint8_t MaxBrightness;
 static uint16_t MiredsWarm;
 static uint16_t MiredsCold;
@@ -93,7 +94,7 @@ static void led_driver_queue_pwm(uint32_t warmPWM, uint32_t coldPWM) {
     }
     pwm[2] = fadeTime;
 
-    ESP_LOGI(TAG, "pwm: %lu, warmCoeff: %lu, coldCoeff: %lu, time: %lu", PWMBase, warmPWM, coldPWM, fadeTime);
+    ESP_LOGI(TAG, "time: %lu", fadeTime);
     
     xQueueSend(fadeEventQueue, pwm, 0);
 }
@@ -106,7 +107,7 @@ void led_driver_set_pwm(uint8_t brightness, int16_t temperature) {
     
     uint32_t tempCoeff = (temperature - MiredsCold) * PWMBase / (MiredsWarm - MiredsCold);
     uint32_t brightnessCoeff = uint32_t(brightness) * PWMBase / uint32_t(MaxBrightness);
-
+    
     uint32_t warmPWM;
     uint32_t coldPWM;
     
@@ -117,7 +118,9 @@ void led_driver_set_pwm(uint8_t brightness, int16_t temperature) {
         warmPWM = topMargin * tempCoeff * brightnessCoeff / PWMBase;
         coldPWM = brightnessCoeff;
     }
-
+    
+    ESP_LOGI(TAG, "brightness: %u, temp: %u, warmPWM: %lu, coldPWM: %lu", brightness, temperature, warmPWM, coldPWM);
+    
     led_driver_queue_pwm(warmPWM, coldPWM);
 }
 
@@ -153,9 +156,15 @@ void led_driver_init()
 #endif
 }
 
-void led_driver_set_bounds(uint16_t warm, uint16_t cool, uint8_t maxBrightness)
+void led_driver_set_bounds(uint16_t warm, uint16_t cold, uint8_t minBrightness, uint8_t maxBrightness)
 {
     MiredsWarm = warm;
-    MiredsCold = cool;
+    MiredsCold = cold;
+    MinBrightness = minBrightness;
     MaxBrightness = maxBrightness;
+    
+    ESP_LOGI(TAG, "Brighness min - max: %u - %u", minBrightness, maxBrightness);
+    ESP_LOGI(TAG, "Color temp min - max: %u - %u", cold, warm);
+
+    ESP_LOGI(TAG, "pwmBase: %lu", PWMBase);
 }
