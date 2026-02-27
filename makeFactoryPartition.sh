@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if (( "$#" == 1 )); then
+  factory_partition_folder=$1
+else  
+  factory_partition_folder=${FACTORY_PARTITION:-"./factory_partition"}
+fi
 factory_partition_path=${FACTORY_PARTITION:-"./factory_partition"}
 
 partition_file=$(find $factory_partition_path -name "*-partition.bin" -print -quit 2>/dev/null)
