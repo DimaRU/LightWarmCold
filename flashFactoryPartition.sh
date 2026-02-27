@@ -54,4 +54,4 @@ echo "manual code:" ${manualcodes[idx-1]}
 echo "partition binary:" ${factory_partition_file}
 echo "partition table": ${CONFIG_PARTITION_TABLE_CUSTOM_FILENAME}
 
-parttool.py --port $1 --partition-table-file partitions.csv write_partition --partition-name="$CONFIG_PARTITION_TABLE_CUSTOM_FILENAME" --input="$factory_partition_file"
+parttool.py --port $1 --partition-table-file "$CONFIG_PARTITION_TABLE_CUSTOM_FILENAME" write_partition --partition-name="factory" --input="$factory_partition_file"
