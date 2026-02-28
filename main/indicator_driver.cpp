@@ -148,5 +148,5 @@ void indicator_driver_init()
     ledc_channel_config(&ledcChannel);
     // ledc_fade_func_install(0);
     indicatorEventQueue = xQueueCreate(10, sizeof(int)*2);
-    xTaskCreate(indicatorTask, "indicatorTask", 2048, nullptr, 14, nullptr);
+    xTaskCreate(indicatorTask, "indicatorTask", 3072, nullptr, 14, nullptr);
 }
