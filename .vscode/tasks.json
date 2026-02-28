@@ -34,6 +34,23 @@
             "problemMatcher": []
         },
         {
+            "label": "Show qrcode",
+            "type": "shell",
+            "command": ". ${IDF_PATH}/export.sh >/dev/null 2>&1 && ./showQrcode.sh ${config:matter.factoryPartition}",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "focus": true
+            },
+            "options": {
+                "env": {
+                    "IDF_PATH": "${config:idf.espIdfPath}",
+                    "ESP_MATTER_PATH": "${config:idf.espMatterPath}"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "Make Matter factory partition",
             "type": "shell",
             "command": ". ${IDF_PATH}/export.sh >/dev/null 2>&1 && ./makeFactoryPartition.sh ${config:matter.factoryPartition}",
