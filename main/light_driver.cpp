@@ -39,11 +39,9 @@ static void app_driver_light_set_power(bool power)
     ESP_LOGI(TAG, "LED set power: %d", power);
     if (power) {
         // Power on
-        // led_driver_set_pwm(currentBrightness, currentColorTemperature);
+        led_driver_set_pwm(currentBrightness, currentColorTemperature);
     } else {
         // Power off
-
-        // currentBrightness = 0;
         led_driver_set_pwm(0, currentColorTemperature);
     }
     currentPowerState = power;
@@ -52,7 +50,7 @@ static void app_driver_light_set_power(bool power)
 static void app_driver_light_set_brightness(uint8_t brightness)
 {
     // int value = REMAP_TO_RANGE(brightness, MATTER_BRIGHTNESS, STANDARD_BRIGHTNESS);
-    ESP_LOGI(TAG, "LED set brightness: %d", brightness);
+    ESP_LOGI(TAG, "LED set brightness: %u, old: %u", brightness, currentBrightness);
     currentBrightness = brightness;
 
     led_driver_set_current();
@@ -133,6 +131,17 @@ static void app_driver_light_set_defaults(uint16_t endpoint_id)
             attribute::get_val(attribute, &val);
             maxBrightness = val.val.u8;
         }
+        attribute = attribute::get(endpoint_id, LevelControl::Id, LevelControl::Attributes::Options::Id);
+        if (attribute != nullptr) {
+            attribute::get_val(attribute, &val);
+            ESP_LOGI(TAG, "Options: %u", val.val.u8);
+        }
+        attribute = attribute::get(endpoint_id, LevelControl::Id, LevelControl::Attributes::FeatureMap::Id);
+        if (attribute != nullptr) {
+            attribute::get_val(attribute, &val);
+            ESP_LOGI(TAG, "FeatureMap: %lu", val.val.u32);
+        }
+
         // Temperature bounds
         attribute = attribute::get(endpoint_id, ColorControl::Id, ColorControl::Attributes::ColorTempPhysicalMaxMireds::Id);
         attribute::get_val(attribute, &val);
@@ -178,6 +187,48 @@ static void app_driver_night_led_set_defaults(uint16_t endpoint_id)
 }
 #endif
 
+namespace esp_matter::endpoint::color_temperature_light {
+using namespace cluster;
+
+endpoint_t *createTemperatureLight(esp_matter::node_t *node, config_t *config, uint8_t flags, void *priv_data) {
+    endpoint_t *endpoint = endpoint::create(node, flags, priv_data);
+    assert(endpoint != nullptr && "Failed to create color temperature light endpoint");
+
+    cluster_t *descriptor_cluster = cluster::descriptor::create(endpoint, &(config->descriptor), CLUSTER_FLAG_SERVER);
+    assert(descriptor_cluster != nullptr && "Failed to create descriptor cluster");
+
+    esp_err_t err = add_device_type(endpoint, get_device_type_id(), get_device_type_version());
+    assert(err == ESP_OK && "Failed to add device type");
+
+    cluster_t *identify_cluster = identify::create(endpoint, &(config->identify), CLUSTER_FLAG_SERVER);
+    identify::command::create_trigger_effect(identify_cluster);
+    groups::create(endpoint, &(config->groups), CLUSTER_FLAG_SERVER);
+    cluster_t *on_off_cluster = on_off::create(endpoint, &(config->on_off), CLUSTER_FLAG_SERVER);
+    on_off::feature::lighting::add(on_off_cluster, &(config->on_off_lighting));
+    on_off::command::create_on(on_off_cluster);
+    on_off::command::create_toggle(on_off_cluster);
+    cluster_t *level_control_cluster = level_control::create(endpoint, &(config->level_control), CLUSTER_FLAG_SERVER);
+    // level_control::feature::on_off::add(level_control_cluster);
+    level_control::feature::lighting::add(level_control_cluster, &(config->level_control_lighting));
+    // Add brightness level min/max, if needed
+    if (config->level_control_lighting.min_level != 1 ||
+        config->level_control_lighting.min_level != MATTER_BRIGHTNESS) {
+            attribute::create(level_control_cluster, LevelControl::Attributes::MinLevel::Id, MATTER_ATTRIBUTE_FLAG_READABLE, esp_matter_uint8(config->level_control_lighting.min_level));
+            attribute::create(level_control_cluster, LevelControl::Attributes::MaxLevel::Id, MATTER_ATTRIBUTE_FLAG_READABLE, esp_matter_uint8(config->level_control_lighting.max_level));
+    }
+    cluster_t *color_control_cluster = color_control::create(endpoint, &(config->color_control), CLUSTER_FLAG_SERVER);
+    color_control::feature::color_temperature::add(color_control_cluster, &(config->color_control_color_temperature));
+    color_control::attribute::create_remaining_time(color_control_cluster, config->color_control_remaining_time);
+    color_control::command::create_stop_move_step(color_control_cluster);
+    cluster_t *scenes_management_cluster = scenes_management::create(endpoint, &(config->scenes_management), CLUSTER_FLAG_SERVER);
+    scenes_management::command::create_copy_scene(scenes_management_cluster);
+    scenes_management::command::create_copy_scene_response(scenes_management_cluster);
+
+    return endpoint;
+}
+}
+
+
 void app_driver_create_endpoints(esp_matter::node_t *node) {
     color_temperature_light::config_t light_config;
     light_config.on_off.on_off = DEFAULT_POWER;
@@ -187,7 +238,6 @@ void app_driver_create_endpoints(esp_matter::node_t *node) {
     light_config.level_control_lighting.start_up_current_level = nullptr;
     light_config.level_control_lighting.min_level = 1;
     light_config.level_control_lighting.max_level = MATTER_BRIGHTNESS;
-    light_config.level_control.options = (uint8_t)LevelControl::OptionsBitmap::kExecuteIfOff; // (uint8_t)LevelControl::OptionsBitmap::kCoupleColorTempToLevel | 
     
     light_config.color_control.color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
     light_config.color_control.enhanced_color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
@@ -198,8 +248,7 @@ void app_driver_create_endpoints(esp_matter::node_t *node) {
     light_config.color_control_color_temperature.start_up_color_temperature_mireds = nullptr;
 
     // endpoint handles can be used to add/modify clusters.
-    endpoint_t *endpoint = color_temperature_light::create(node, &light_config, ENDPOINT_FLAG_NONE, nullptr);
-    ABORT_APP_ON_FAILURE(endpoint != nullptr, ESP_LOGE(TAG, "Failed to create color temperature light endpoint"));
+    endpoint_t *endpoint = color_temperature_light::createTemperatureLight(node, &light_config, ENDPOINT_FLAG_NONE, nullptr);
     
     light_endpoint_id = endpoint::get_id(endpoint);
     ESP_LOGI(TAG, "Light created with endpoint_id %d", light_endpoint_id);
@@ -209,12 +258,6 @@ void app_driver_create_endpoints(esp_matter::node_t *node) {
     attribute_t *current_level_attribute = attribute::get(level_control_cluster, LevelControl::Attributes::CurrentLevel::Id);
     attribute::set_deferred_persistence(current_level_attribute);
 
-    // Add brightness level min/max, if needed
-    if (light_config.level_control_lighting.min_level != 1 ||
-        light_config.level_control_lighting.min_level != MATTER_BRIGHTNESS) {
-        esp_matter::attribute::create(level_control_cluster, LevelControl::Attributes::MinLevel::Id, MATTER_ATTRIBUTE_FLAG_READABLE, esp_matter_uint8(light_config.level_control_lighting.min_level));
-        esp_matter::attribute::create(level_control_cluster, LevelControl::Attributes::MaxLevel::Id, MATTER_ATTRIBUTE_FLAG_READABLE, esp_matter_uint8(light_config.level_control_lighting.max_level));
-    }
 
     cluster_t *color_control_cluster = cluster::get(endpoint, ColorControl::Id);
     attribute_t *color_temp_attribute = attribute::get(color_control_cluster, ColorControl::Attributes::ColorTemperatureMireds::Id);
@@ -252,18 +295,6 @@ void button_toggle_cb()
     attribute::get_val(attribute, &val);
     val.val.b = !val.val.b;
     attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-
-    if (val.val.b) {
-        cluster_id = LevelControl::Id;
-        attribute_id = LevelControl::Attributes::CurrentLevel::Id;
-        attribute = attribute::get(endpoint_id, cluster_id, attribute_id);
-        attribute::get_val(attribute, &val);
-        auto level = val.val.u8;
-        val.val.u8 = 1;
-        attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-        val.val.u8 = level;
-        attribute::update(endpoint_id, cluster_id, attribute_id, &val);
-    }
 }
 
 // Print hardware config
